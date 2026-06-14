@@ -476,6 +476,16 @@ async function trySwap(rowA, colA, rowB, colB) {
   const tileAAfterSwap = board[rowB][colB];
   const tileBAfterSwap = board[rowA][colA];
 
+  const matches = findMatches();
+
+  if (matches.hasMatches) {
+    await resolveBoard(matches, [createKey(rowA, colA), createKey(rowB, colB)]);
+
+    isResolving = false;
+    render();
+    return;
+  }
+
   const hasSpecialMove =
     Boolean(tileAAfterSwap?.special) || Boolean(tileBAfterSwap?.special);
 
@@ -510,17 +520,8 @@ async function trySwap(rowA, colA, rowB, colB) {
     return;
   }
 
-  const matches = findMatches();
-
-  if (!matches.hasMatches) {
-    await wait(120);
-    swapTiles(rowA, colA, rowB, colB);
-    isResolving = false;
-    render();
-    return;
-  }
-
-  await resolveBoard(matches, [createKey(rowA, colA), createKey(rowB, colB)]);
+  await wait(120);
+  swapTiles(rowA, colA, rowB, colB);
 
   isResolving = false;
   render();
