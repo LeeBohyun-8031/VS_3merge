@@ -922,13 +922,14 @@ function triggerManualSpecial({ tile, row, col, targetTile, removeKeys }) {
 
     if (!targetTile) return;
 
-    if (targetTile.special && targetTile.special !== "rainbow") {
-      const randomType = getRandomNormalTypeOnBoard();
-      addNormalTilesByType(randomType, removeKeys);
+    if (targetTile.special === "rainbow") {
+      addAllBoardTiles(removeKeys);
       return;
     }
 
-    if (targetTile.special === "rainbow") {
+    if (targetTile.special && targetTile.special !== "rainbow") {
+      const randomType = getRandomNormalTypeOnBoard();
+      addNormalTilesByType(randomType, removeKeys);
       return;
     }
 
@@ -1022,6 +1023,16 @@ function addNormalTilesByType(type, removeKeys) {
       if (tile.special) continue;
 
       if (tile.type === type) {
+        removeKeys.add(createKey(row, col));
+      }
+    }
+  }
+}
+
+function addAllBoardTiles(removeKeys) {
+  for (let row = 0; row < SIZE; row += 1) {
+    for (let col = 0; col < SIZE; col += 1) {
+      if (board[row][col]) {
         removeKeys.add(createKey(row, col));
       }
     }
