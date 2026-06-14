@@ -542,6 +542,10 @@ async function resolveBoard(initialMatches = null, preferredKeys = []) {
     localCombo += 1;
     combo = localCombo;
 
+    const matchedSpecialEffects = collectMatchedSpecialEffects(
+      currentMatches.matchedKeys
+    );
+
     const specialMap = selectSpecials(currentMatches, preferredKeys);
     const protectedKeys = new Set(Object.keys(specialMap));
     const removeKeys = new Set(currentMatches.matchedKeys);
@@ -552,6 +556,12 @@ async function resolveBoard(initialMatches = null, preferredKeys = []) {
       board[row][col] = tile;
       removeKeys.delete(key);
     }
+
+    triggerStoredSpecialEffects(
+      matchedSpecialEffects,
+      removeKeys,
+      protectedKeys
+    );
 
     expandSpecialEffects(removeKeys, protectedKeys);
 
@@ -569,6 +579,52 @@ async function resolveBoard(initialMatches = null, preferredKeys = []) {
   }
 
   combo = 0;
+}
+
+function collectMatchedSpecialEffects(matchedKeys) {
+  const effects = [];
+
+  for (const key of matchedKeys) {
+    const { row, col } = parseKey(key);
+    const tile = board[row][col];
+
+    if (!tile?.special) continue;
+    if (tile.special === "rainbow") continue;
+
+    effects.push({
+      special: tile.special,
+      row,
+      col,
+    });
+  }
+
+  return effects;
+}
+
+function triggerStoredSpecialEffects(effects, removeKeys, protectedKeys) {
+  for (const effect of effects) {
+    const { special, row, col } = effect;
+
+    if (special === "horizontal") {
+      for (let currentCol = 0; currentCol < SIZE; currentCol += 1) {
+        removeKeys.add(createKey(row, currentCol));
+      }
+    }
+
+    if (special === "vertical") {
+      for (let currentRow = 0; currentRow < SIZE; currentRow += 1) {
+        removeKeys.add(createKey(currentRow, col));
+      }
+    }
+
+    if (special === "bomb") {
+      addBombRange(row, col, removeKeys);
+    }
+  }
+
+  for (const key of protectedKeys) {
+    removeKeys.delete(key);
+  }
 }
 
 async function clearAndCollapse(removeKeys, comboMultiplier) {
@@ -868,7 +924,6 @@ function triggerManualSpecial({ tile, row, col, targetTile, removeKeys }) {
 
     if (targetTile.special && targetTile.special !== "rainbow") {
       const randomType = getRandomNormalTypeOnBoard();
-
       addNormalTilesByType(randomType, removeKeys);
       return;
     }
