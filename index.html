@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>3매치 미니게임</title>
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="game-app">
+    <section class="title-area">
+      <p class="eyebrow">Mini Match Puzzle</p>
+      <h1>젤리 매치 챌린지</h1>
+      <p class="description">
+        인접한 블록을 드래그해서 3개 이상 맞추고,
+        라인·폭탄·무지개 특수블록으로 높은 점수를 노려보세요.
+      </p>
+    </section>
+
+    <section class="status-panel" aria-label="게임 상태">
+  <div class="status-card">
+    <span>점수</span>
+    <strong id="score">0</strong>
+  </div>
+
+  <div class="status-card">
+    <span>남은 시간</span>
+    <strong id="timer">60</strong>
+  </div>
+
+  <div class="status-card">
+    <span>최고 점수</span>
+    <strong id="bestScore">0</strong>
+  </div>
+</section>
+
+    <section class="game-layout">
+      <section class="board-wrap" aria-label="게임 영역">
+        <div id="board" class="board" aria-label="3매치 게임 보드"></div>
+
+        <div id="messageBox" class="message-box">
+          <div class="message-content">
+            <p class="message-eyebrow">Ready?</p>
+            <strong>게임 시작</strong>
+            <p>
+              60초 동안 블록을 드래그해서 최대한 높은 점수를 달성하세요.
+            </p>
+
+            <button id="startButton" class="primary-button start-button" type="button">
+              게임 시작
+            </button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./script.js"></script>
+</body>
+</html>
