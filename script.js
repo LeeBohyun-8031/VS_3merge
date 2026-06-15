@@ -1,6 +1,7 @@
 const SIZE = 8;
 const GAME_TIME = 60;
 const DRAG_THRESHOLD = 26;
+const HINT_DELAY = 3000;
 
 const TILE_TYPES = ["red", "blue", "green", "yellow", "purple"];
 
@@ -57,6 +58,7 @@ let selectedCell = null;
 let draggingCell = null;
 let dragState = null;
 let clearingKeys = new Set();
+let hintKeys = new Set();
 
 let score = 0;
 let combo = 0;
@@ -64,6 +66,7 @@ let remainTime = GAME_TIME;
 let bestScore = Number(localStorage.getItem("match3BestScore") || 0);
 
 let timerId = null;
+let hintTimerId = null;
 let isPlaying = false;
 let isResolving = false;
 
@@ -118,6 +121,7 @@ function showHowToPlay() {
 
 function startGame() {
   stopTimer();
+  stopHintTimer();
 
   score = 0;
   combo = 0;
@@ -126,6 +130,7 @@ function startGame() {
   draggingCell = null;
   dragState = null;
   clearingKeys = new Set();
+  hintKeys = new Set();
 
   isPlaying = true;
   isResolving = false;
@@ -144,6 +149,7 @@ function startGame() {
       endGame();
     }
   }, 1000);
+  scheduleHint();
 }
 
 function endGame() {
@@ -154,6 +160,8 @@ function endGame() {
   dragState = null;
 
   stopTimer();
+  stopHintTimer();
+  clearHint();
 
   const isNewBest = score > bestScore;
 
@@ -306,6 +314,9 @@ function render() {
       if (clearingKeys.has(key)) {
         cell.classList.add("clearing");
       }
+     if (hintKeys.has(key)) {
+       cell.classList.add("hint");
+     }
 
       if (tile) {
         cell.classList.add(`type-${tile.type}`);
@@ -371,6 +382,8 @@ function handlePointerDown(event) {
   }
 
   event.preventDefault();
+  stopHintTimer();
+  clearHint();
 
   const row = Number(cellElement.dataset.row);
   const col = Number(cellElement.dataset.col);
@@ -502,6 +515,8 @@ async function trySwap(rowA, colA, rowB, colB) {
   if (isResolving) return;
 
   isResolving = true;
+  stopHintTimer();
+  clearHint();
 
   swapTiles(rowA, colA, rowB, colB);
   render();
@@ -514,9 +529,7 @@ async function trySwap(rowA, colA, rowB, colB) {
 
   if (matches.hasMatches) {
     await resolveBoard(matches, [createKey(rowA, colA), createKey(rowB, colB)]);
-
-    isResolving = false;
-    render();
+    finishResolvingMove();
     return;
   }
 
@@ -549,16 +562,86 @@ async function trySwap(rowA, colA, rowB, colB) {
       await resolveBoard();
     }
 
-    isResolving = false;
-    render();
+    finishResolvingMove();
     return;
   }
 
   await wait(120);
   swapTiles(rowA, colA, rowB, colB);
 
+  finishResolvingMove();
+}
+
+function finishResolvingMove() {
   isResolving = false;
+  scheduleHint();
   render();
+}
+
+function scheduleHint() {
+  stopHintTimer();
+
+  if (!isPlaying || isResolving) return;
+
+  hintTimerId = setTimeout(() => {
+    showHint();
+  }, HINT_DELAY);
+}
+
+function stopHintTimer() {
+  if (hintTimerId) {
+    clearTimeout(hintTimerId);
+    hintTimerId = null;
+  }
+}
+
+function clearHint() {
+  hintKeys = new Set();
+}
+
+function showHint() {
+  if (!isPlaying || isResolving) return;
+
+  const hintMove = findHintMove();
+
+  if (!hintMove) {
+    scheduleHint();
+    return;
+  }
+
+  hintKeys = new Set(hintMove);
+  render();
+}
+
+function findHintMove() {
+  const directions = [
+    { row: 0, col: 1 },
+    { row: 1, col: 0 },
+  ];
+
+  for (let row = 0; row < SIZE; row += 1) {
+    for (let col = 0; col < SIZE; col += 1) {
+      for (const direction of directions) {
+        const targetRow = row + direction.row;
+        const targetCol = col + direction.col;
+
+        if (!isInsideBoard(targetRow, targetCol)) continue;
+
+        swapTiles(row, col, targetRow, targetCol);
+        const matches = findMatches();
+        swapTiles(row, col, targetRow, targetCol);
+
+        if (matches.hasMatches) {
+          return [
+            createKey(row, col),
+            createKey(targetRow, targetCol),
+          ];
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 function swapTiles(rowA, colA, rowB, colB) {

@@ -163,6 +163,15 @@ button {
   animation: pop 0.18s ease forwards;
 }
 
+.cell.hint {
+  animation: hint-shake 0.48s ease-in-out infinite;
+  outline: 4px solid rgba(255, 213, 79, 0.95);
+  box-shadow:
+    0 0 0 5px rgba(255, 213, 79, 0.28),
+    inset 0 -6px 0 rgba(55, 34, 77, 0.12),
+    0 12px 24px rgba(255, 193, 7, 0.24);
+}
+
 .cell.disabled {
   pointer-events: none;
   cursor: default;
@@ -344,6 +353,25 @@ button {
   100% {
     transform: scale(0.35) rotate(12deg);
     opacity: 0;
+  }
+}
+
+@keyframes hint-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  25% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateX(3px) rotate(2deg);
+  }
+
+  75% {
+    transform: translateX(-2px) rotate(-1deg);
   }
 }
 
