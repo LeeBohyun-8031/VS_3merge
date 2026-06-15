@@ -70,7 +70,7 @@ let isResolving = false;
 bestScoreElement.textContent = bestScore.toLocaleString();
 
 if (startButton) {
-  startButton.addEventListener("click", startGame);
+  startButton.addEventListener("click", showHowToPlay);
 }
 
 boardElement.addEventListener("pointerdown", handlePointerDown);
@@ -81,6 +81,40 @@ window.addEventListener("pointercancel", resetDragState);
 createBoard();
 render();
 updateStatus();
+
+function showHowToPlay() {
+  messageBox.innerHTML = `
+    <div class="message-content how-to-content">
+      <p class="message-eyebrow">How to Play</p>
+      <strong>플레이 방법</strong>
+
+      <ul class="how-to-list">
+        <li>인접한 블록을 드래그해서 서로 위치를 바꿉니다.</li>
+        <li>같은 색 블록이 3개 이상 연결되면 제거되고 점수를 얻습니다.</li>
+        <li>4개 일직선 매치 시 라인 블록이 생성됩니다.</li>
+        <li>L자, T자, +자 매치 시 폭탄 블록이 생성됩니다.</li>
+        <li>5개 이상 일직선 매치 시 무지개 블록이 생성됩니다.</li>
+        <li>무지개와 무지개를 교환하면 필드 전체 블록이 제거됩니다.</li>
+      </ul>
+
+      <p class="how-to-note">
+        설명창을 닫고 게임을 시작하면 60초 제한 시간이 흐르기 시작합니다.
+      </p>
+
+      <button id="confirmStartButton" class="primary-button" type="button">
+        확인하고 시작
+      </button>
+    </div>
+  `;
+
+  messageBox.classList.remove("hidden");
+
+  const confirmStartButton = document.getElementById("confirmStartButton");
+
+  if (confirmStartButton) {
+    confirmStartButton.addEventListener("click", startGame);
+  }
+}
 
 function startGame() {
   stopTimer();

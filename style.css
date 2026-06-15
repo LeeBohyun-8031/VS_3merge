@@ -502,3 +502,52 @@ button {
     font-size: 19px;
   }
 }
+
+.how-to-content {
+  width: min(420px, 100%);
+}
+
+.how-to-list {
+  width: 100%;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  color: #5f536f;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.how-to-list li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.how-to-list li + li {
+  margin-top: 6px;
+}
+
+.how-to-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #ff5d9e;
+  font-weight: 900;
+}
+
+.how-to-note {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #8a819a;
+}
+
+@media (max-width: 520px) {
+  .how-to-list {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .how-to-note {
+    font-size: 12px;
+  }
+}
