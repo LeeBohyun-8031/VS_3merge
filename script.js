@@ -1,6 +1,9 @@
 const SIZE = 8;
-const GAME_TIME = 60;
+const GAME_TIME = 100;
 const DRAG_THRESHOLD = 26;
+const RANKING_STORAGE_KEY = "match3RankingRecords";
+const NICKNAME_STORAGE_KEY = "match3Nickname";
+const RANKING_VIEW_COUNT = 5;
 const HINT_DELAY = 3000;
 
 const TILE_TYPES = ["red", "blue", "green", "yellow", "purple"];
@@ -51,6 +54,7 @@ const scoreElement = document.getElementById("score");
 const timerElement = document.getElementById("timer");
 const bestScoreElement = document.getElementById("bestScore");
 const startButton = document.getElementById("startButton");
+const rankingButton = document.getElementById("rankingButton");
 const messageBox = document.getElementById("messageBox");
 
 let board = [];
@@ -76,6 +80,10 @@ if (startButton) {
   startButton.addEventListener("click", showHowToPlay);
 }
 
+if (rankingButton) {
+  rankingButton.addEventListener("click", showRanking);
+}
+
 boardElement.addEventListener("pointerdown", handlePointerDown);
 window.addEventListener("pointermove", handlePointerMove);
 window.addEventListener("pointerup", handlePointerUp);
@@ -84,12 +92,31 @@ window.addEventListener("pointercancel", resetDragState);
 createBoard();
 render();
 updateStatus();
+setRankingButtonVisible(true);
 
 function showHowToPlay() {
+  setRankingButtonVisible(false);
+
+  const savedNickname = getSavedNickname();
+
   messageBox.innerHTML = `
     <div class="message-content how-to-content">
       <p class="message-eyebrow">How to Play</p>
       <strong>플레이 방법</strong>
+
+      <label class="nickname-label" for="nicknameInput">
+        닉네임
+      </label>
+
+      <input
+        id="nicknameInput"
+        class="nickname-input"
+        type="text"
+        maxlength="10"
+        placeholder="닉네임 입력"
+        value="${escapeHTML(savedNickname)}"
+        autocomplete="off"
+      />
 
       <ul class="how-to-list">
         <li>인접한 블록을 드래그해서 서로 위치를 바꿉니다.</li>
@@ -101,7 +128,7 @@ function showHowToPlay() {
       </ul>
 
       <p class="how-to-note">
-        설명창을 닫고 게임을 시작하면 60초 제한 시간이 흐르기 시작합니다.
+        확인 버튼을 누르면 ${GAME_TIME}초 제한 시간이 흐르기 시작합니다.
       </p>
 
       <button id="confirmStartButton" class="primary-button" type="button">
@@ -112,10 +139,14 @@ function showHowToPlay() {
 
   messageBox.classList.remove("hidden");
 
+  const nicknameInput = document.getElementById("nicknameInput");
   const confirmStartButton = document.getElementById("confirmStartButton");
 
   if (confirmStartButton) {
-    confirmStartButton.addEventListener("click", startGame);
+    confirmStartButton.addEventListener("click", () => {
+      saveNickname(nicknameInput?.value || "");
+      startGame();
+    });
   }
 }
 
@@ -134,6 +165,8 @@ function startGame() {
 
   isPlaying = true;
   isResolving = false;
+
+  setRankingButtonVisible(false);
 
   messageBox.classList.add("hidden");
 
@@ -166,6 +199,8 @@ function endGame() {
   const isNewBest = score > bestScore;
 
   if (isNewBest) {
+    saveRankingRecord(getSavedNickname(), score);
+
     bestScore = score;
     localStorage.setItem("match3BestScore", String(bestScore));
   }
@@ -182,7 +217,7 @@ function endGame() {
       <p class="result-sub">
         ${
           isNewBest
-            ? `새로운 최고 점수: ${bestScore.toLocaleString()}점`
+            ? `새 최고 기록 달성! 랭킹에 자동 저장되었습니다.`
             : `최고 점수: ${bestScore.toLocaleString()}점`
         }
       </p>
@@ -194,11 +229,12 @@ function endGame() {
   `;
 
   messageBox.classList.remove("hidden");
+  setRankingButtonVisible(true);
 
   const resultRestartButton = document.getElementById("resultRestartButton");
 
   if (resultRestartButton) {
-    resultRestartButton.addEventListener("click", startGame);
+    resultRestartButton.addEventListener("click", showHowToPlay);
   }
 }
 
@@ -207,6 +243,160 @@ function stopTimer() {
     clearInterval(timerId);
     timerId = null;
   }
+}
+
+function showRanking() {
+  if (isPlaying) return;
+
+  setRankingButtonVisible(false);
+
+  messageBox.innerHTML = `
+    <div class="message-content ranking-content">
+      <p class="message-eyebrow">Ranking</p>
+      <strong>랭킹 TOP 5</strong>
+
+      <div class="ranking-list-wrap">
+        ${renderRankingList()}
+      </div>
+
+      <button id="closeRankingButton" class="result-button" type="button">
+        닫기
+      </button>
+    </div>
+  `;
+
+  messageBox.classList.remove("hidden");
+
+  const closeRankingButton = document.getElementById("closeRankingButton");
+
+  if (closeRankingButton) {
+    closeRankingButton.addEventListener("click", showReadyMessage);
+  }
+}
+
+function showReadyMessage() {
+  messageBox.innerHTML = `
+    <div class="message-content">
+      <p class="message-eyebrow">Ready?</p>
+      <strong>게임 시작</strong>
+      <p>
+        ${GAME_TIME}초 동안 블록을 드래그해서 최대한 높은 점수를 달성하세요.
+      </p>
+
+      <button id="readyStartButton" class="primary-button start-button" type="button">
+        게임 시작
+      </button>
+    </div>
+  `;
+
+  messageBox.classList.remove("hidden");
+  setRankingButtonVisible(true);
+
+  const readyStartButton = document.getElementById("readyStartButton");
+
+  if (readyStartButton) {
+    readyStartButton.addEventListener("click", showHowToPlay);
+  }
+}
+
+function saveRankingRecord(nickname, currentScore) {
+  const safeNickname = normalizeNickname(nickname);
+  const records = getRankingRecords();
+
+  records.push({
+    nickname: safeNickname,
+    score: currentScore,
+  });
+
+  records.sort((a, b) => b.score - a.score);
+
+  localStorage.setItem(RANKING_STORAGE_KEY, JSON.stringify(records));
+}
+
+function getRankingRecords() {
+  try {
+    const savedRecords = localStorage.getItem(RANKING_STORAGE_KEY);
+
+    if (!savedRecords) {
+      return [];
+    }
+
+    const parsedRecords = JSON.parse(savedRecords);
+
+    if (!Array.isArray(parsedRecords)) {
+      return [];
+    }
+
+    return parsedRecords
+      .filter((record) => {
+        return (
+          record &&
+          typeof record.nickname === "string" &&
+          typeof record.score === "number"
+        );
+      })
+      .sort((a, b) => b.score - a.score);
+  } catch {
+    return [];
+  }
+}
+
+function renderRankingList() {
+  const topRecords = getRankingRecords().slice(0, RANKING_VIEW_COUNT);
+
+  if (topRecords.length <= 0) {
+    return `<p class="empty-ranking">아직 저장된 기록이 없습니다.</p>`;
+  }
+
+  return `
+    <ol class="ranking-list">
+      ${topRecords
+        .map((record, index) => {
+          return `
+            <li class="ranking-item">
+              <span class="rank-number">${index + 1}</span>
+              <span class="rank-nickname">${escapeHTML(record.nickname)}</span>
+              <strong class="rank-score">${record.score.toLocaleString()}점</strong>
+            </li>
+          `;
+        })
+        .join("")}
+    </ol>
+  `;
+}
+
+function saveNickname(nickname) {
+  const safeNickname = normalizeNickname(nickname);
+  localStorage.setItem(NICKNAME_STORAGE_KEY, safeNickname);
+}
+
+function getSavedNickname() {
+  return normalizeNickname(localStorage.getItem(NICKNAME_STORAGE_KEY) || "");
+}
+
+function normalizeNickname(nickname) {
+  const trimmedNickname = String(nickname).trim();
+
+  if (!trimmedNickname) {
+    return "플레이어";
+  }
+
+  return trimmedNickname.slice(0, 10);
+}
+
+function setRankingButtonVisible(isVisible) {
+  if (!rankingButton) return;
+
+  rankingButton.hidden = !isVisible;
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function updateStatus() {
